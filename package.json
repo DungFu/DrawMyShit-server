@@ -1,0 +1,12 @@
+{
+  "name": "DrawMyShit-server",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "node app.js",
+    "ngrok": "ngrok -authtoken r_15sYXZ-sSl0TtDvqod -subdomain drawmyshit 9001"
+  },
+  "dependencies": {
+    "express": "4.x",
+    "socket.io": "1.x"
+  }
+}
