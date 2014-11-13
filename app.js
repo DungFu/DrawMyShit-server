@@ -14,16 +14,19 @@ io.on('connection', function(socket){
   socket.on('wipe', function(data) {
     console.log('wipe');
     lineData = [];
+    socket.broadcast.emit('wipe');
   });
 
   socket.on('lineTo', function(data) {
     console.log(data);
     lineData.push(data);
+    socket.broadcast.emit('lineTo', data);
   });
 
   socket.on('moveTo', function(data) {
     console.log(data);
     lineData.push(data);
+    socket.broadcast.emit('moveTo', data);
   });
 });
 
