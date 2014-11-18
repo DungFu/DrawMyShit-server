@@ -13,19 +13,34 @@ if (process.env.REDISCLOUD_URL) {
   client = redis.createClient();
 }
 
+function checkType() {
+  client.type('lineData', function(err, data) {
+    if (data != "list" && data != "none") {
+      resetData();
+    }
+  });
+}
+checkType();
+
 function getData(callback) {
-  client.get('lineData', function (err, data) {
-    if (data === null) {
-      setData([]);
-      callback([]);
+  client.exists('lineData', function(err, data) {
+    if (data) {
+      client.lrange('lineData', 0, -1, function (err, data) {
+        callback(data);
+      });
     } else {
-      callback(JSON.parse(data));
+      resetData();
+      callback([]);
     }
   });
 }
 
-function setData(data) {
-  client.set('lineData', JSON.stringify(data));
+function resetData() {
+  client.del('lineData');
+}
+
+function addData(data) {
+  client.rpush('lineData', JSON.stringify(data));
 }
 
 app.get('/', function(req, res) {
@@ -35,32 +50,26 @@ app.get('/', function(req, res) {
 io.on('connection', function(socket) {
   getData(function(lineData) {
     for (var i = 0; i < lineData.length; i++) {
-      socket.emit(lineData[i][0], lineData[i][1]);
+      var parsedData = JSON.parse(lineData[i]);
+      socket.emit(parsedData[0], parsedData[1]);
     }
   });
-  
 
   socket.on('erase', function(data) {
-    setData([]);
+    resetData();
     socket.broadcast.emit('erase');
   });
 
   socket.on('lineTo', function(data) {
     data.id = socket.id;
-    getData(function(lineData) {
-      lineData.push(['lineTo', data]);
-      setData(lineData);
-      socket.broadcast.emit('lineTo', data);
-    });
+    addData(['lineTo', data]);
+    socket.broadcast.emit('lineTo', data);
   });
 
   socket.on('moveTo', function(data) {
     data.id = socket.id;
-    getData(function(lineData) {
-      lineData.push(['moveTo', data]);
-      setData(lineData);
-      socket.broadcast.emit('moveTo', data);
-    });
+    addData(['moveTo', data]);
+    socket.broadcast.emit('moveTo', data);
   });
 });
 
