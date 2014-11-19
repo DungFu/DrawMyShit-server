@@ -26,6 +26,9 @@ function getData(callback) {
   client.exists('lineData', function(err, data) {
     if (data) {
       client.lrange('lineData', 0, -1, function (err, data) {
+        for (var i = 0; i < data.length; i++) {
+          data[i] = JSON.parse(data[i]);
+        }
         callback(data);
       });
     } else {
@@ -49,10 +52,7 @@ app.get('/', function(req, res) {
 
 io.on('connection', function(socket) {
   getData(function(lineData) {
-    for (var i = 0; i < lineData.length; i++) {
-      var parsedData = JSON.parse(lineData[i]);
-      socket.emit(parsedData[0], parsedData[1]);
-    }
+    socket.emit('batch', lineData);
   });
 
   socket.on('erase', function(data) {
