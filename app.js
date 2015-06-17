@@ -13,37 +13,28 @@ if (process.env.REDISCLOUD_URL) {
   client = redis.createClient();
 }
 
-function checkType() {
-  client.type('lineData', function(err, data) {
-    if (data != "list" && data != "none") {
-      resetData();
-    }
-  });
-}
-checkType();
-
-function getData(callback) {
-  client.exists('lineData', function(err, data) {
+function getData(room, callback) {
+  client.exists('lineData-'+room, function(err, data) {
     if (data) {
-      client.lrange('lineData', 0, -1, function (err, data) {
+      client.lrange('lineData-'+room, 0, -1, function (err, data) {
         for (var i = 0; i < data.length; i++) {
           data[i] = JSON.parse(data[i]);
         }
         callback(data);
       });
     } else {
-      resetData();
+      resetData(room);
       callback([]);
     }
   });
 }
 
-function resetData() {
-  client.del('lineData');
+function resetData(room) {
+  client.del('lineData-'+room);
 }
 
-function addData(data) {
-  client.rpush('lineData', JSON.stringify(data));
+function addData(room, data) {
+  client.rpush('lineData-'+room, JSON.stringify(data));
 }
 
 app.get('/', function(req, res) {
@@ -51,25 +42,40 @@ app.get('/', function(req, res) {
 });
 
 io.on('connection', function(socket) {
-  getData(function(lineData) {
-    socket.emit('batch', lineData);
+  socket.on('getData', function() {
+    var room = socket.rooms[0];
+    getData(room, function(lineData) {
+      socket.emit('batch', lineData);
+    });
   });
 
   socket.on('erase', function(data) {
-    resetData();
+    var room = socket.rooms[0];
+    resetData(room);
     socket.broadcast.emit('erase');
   });
 
   socket.on('lineTo', function(data) {
+    var room = socket.rooms[0];
     data.id = socket.id;
-    addData(['lineTo', data]);
-    socket.broadcast.emit('lineTo', data);
+    addData(room, ['lineTo', data]);
+    io.to(room).emit('lineTo', data);
   });
 
   socket.on('moveTo', function(data) {
+    var room = socket.rooms[0];
     data.id = socket.id;
-    addData(['moveTo', data]);
-    socket.broadcast.emit('moveTo', data);
+    addData(room, ['moveTo', data]);
+    io.to(room).emit('moveTo', data);
+  });
+
+  socket.on('joinRoom', function(roomName) {
+    if (socket.rooms.length > 0) {
+      for (var i = 0; i < socket.rooms.length; i++) {
+        socket.leave(socket.rooms[i]);
+      }
+    }
+    socket.join(roomName);
   });
 });
 
