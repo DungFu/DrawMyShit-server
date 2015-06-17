@@ -6,13 +6,18 @@ var url = require('url');
 
 // Set up Heroku Redis
 var client;
-if (process.env.REDISCLOUD_URL) {
+if (process.env.REDIS_URL) {
   var redisURL = url.parse(process.env.REDIS_URL);
   client = redis.createClient(redisURL.port, redisURL.hostname);
   client.auth(redisURL.auth.split(":")[1]);
 } else {
   client = redis.createClient();
 }
+
+var port = process.env.PORT || 3000;
+http.listen(port, function() {
+  console.log('listening on port: '+port);
+});
 
 function getData(room, callback) {
   client.exists('lineData-'+room, function(err, data) {
@@ -78,10 +83,4 @@ io.on('connection', function(socket) {
     }
     socket.join(roomName);
   });
-});
-
-var port = process.env.PORT || 3000;
-
-http.listen(port, function() {
-  console.log('listening on port: '+port);
 });
