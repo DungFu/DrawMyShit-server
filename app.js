@@ -38,7 +38,7 @@ function addData(room, data) {
 }
 
 app.get('/', function(req, res) {
-  res.send('index');
+  res.send('This server only does sockets.');
 });
 
 io.on('connection', function(socket) {
